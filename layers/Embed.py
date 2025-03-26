@@ -72,6 +72,7 @@ class TemporalEmbedding(nn.Module):
         weekday_size = 7
         day_size = 32
         month_size = 13
+        year_size = 10
 
         Embed = FixedEmbedding if embed_type == 'fixed' else nn.Embedding
         if freq == 't':
@@ -80,6 +81,9 @@ class TemporalEmbedding(nn.Module):
         self.weekday_embed = Embed(weekday_size, d_model)
         self.day_embed = Embed(day_size, d_model)
         self.month_embed = Embed(month_size, d_model)
+        # year
+        self.year_embed = Embed(year_size, d_model)
+        
 
     def forward(self, x):
         x = x.long()
@@ -89,8 +93,10 @@ class TemporalEmbedding(nn.Module):
         weekday_x = self.weekday_embed(x[:, :, 2])
         day_x = self.day_embed(x[:, :, 1])
         month_x = self.month_embed(x[:, :, 0])
+        # year, follow seqeunce from data_loader
+        year_x = self.year_embed(x[:, :, 5])
 
-        return hour_x + weekday_x + day_x + month_x + minute_x
+        return hour_x + weekday_x + day_x + month_x + minute_x + year_x
 
 
 class TimeFeatureEmbedding(nn.Module):
