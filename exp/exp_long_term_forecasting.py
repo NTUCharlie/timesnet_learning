@@ -116,7 +116,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                         outputs = self.model(batch_x, None, dec_inp, batch_y_mark)
 
                         f_dim = -1 if self.args.features == 'MS' else 0
-                        outputs = outputs[:, -self.args.pred_len:, f_dim:]
+                        outputs = outputs[:, -self.args.pred_len:, f_dim:] #shape [batch_size, pre_len, 1]
                         batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
                         loss = criterion(outputs, batch_y)
                         train_loss.append(loss.item())

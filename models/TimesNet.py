@@ -42,20 +42,18 @@ class TimesBlock(nn.Module):
             period = period_list[i]
             # padding
             if (self.seq_len + self.pred_len) % period != 0:
-                length = (
-                                 ((self.seq_len + self.pred_len) // period) + 1) * period
+                length = (((self.seq_len + self.pred_len) // period) + 1) * period
                 padding = torch.zeros([x.shape[0], (length - (self.seq_len + self.pred_len)), x.shape[2]]).to(x.device)
                 out = torch.cat([x, padding], dim=1)
             else:
                 length = (self.seq_len + self.pred_len)
                 out = x
             # reshape
-            out = out.reshape(B, length // period, period,
-                              N).permute(0, 3, 1, 2).contiguous()
+            out = out.reshape(B, length // period, period,N).permute(0, 3, 1, 2).contiguous() #shape: [batch_size, d_model, length // period, period]
             # 2D conv: from 1d Variation to 2d Variation
-            out = self.conv(out)
+            out = self.conv(out) #shape: [batch_size, d_model, length // period, period]
             # reshape back
-            out = out.permute(0, 2, 3, 1).reshape(B, -1, N)
+            out = out.permute(0, 2, 3, 1).reshape(B, -1, N) #shape: [batch_size, length // period, period, d_model] -> [batch_size, length, d_model], length ~ (pred_len + seq_len)
             res.append(out[:, :(self.seq_len + self.pred_len), :])
         res = torch.stack(res, dim=-1)
         # adaptive aggregation
@@ -107,16 +105,16 @@ class Model(nn.Module):
         stdev = torch.sqrt(
             torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
         x_enc /= stdev
-
+        # x_enc shape: [batch_size, seq_len, enc_in], enc_in must equal to the number of features from raw data (all columns except 'date')
+        
         # embedding
-        enc_out = self.enc_embedding(x_enc, x_mark_enc)  # [B,T,C]
-        enc_out = self.predict_linear(enc_out.permute(0, 2, 1)).permute(
-            0, 2, 1)  # align temporal dimension
+        enc_out = self.enc_embedding(x_enc, x_mark_enc)  # shape [batch_size, seq_len, d_model], d_model is the dimentions of inception block
+        enc_out = self.predict_linear(enc_out.permute(0, 2, 1)).permute(0, 2, 1)  # shape [batch_size,d_model,seq_len+pred_len] -> shape [batch_size,seq_len+pred_len,d_model]
         # TimesNet
         for i in range(self.layer):
-            enc_out = self.layer_norm(self.model[i](enc_out))
+            enc_out = self.layer_norm(self.model[i](enc_out)) # self.model[i](): [batch_size,seq_len+pred_len,d_model] -> [batch_size, d_model, length // period, period] -> conv2d
         # porject back
-        dec_out = self.projection(enc_out)
+        dec_out = self.projection(enc_out) #shape [batch_size,seq_len+pred_len,d_model] -> shape [batch_size,seq_len+pred_len,c_out]
 
         # De-Normalization from Non-stationary Transformer
         dec_out = dec_out * \
@@ -124,7 +122,7 @@ class Model(nn.Module):
                       1, self.pred_len + self.seq_len, 1))
         dec_out = dec_out + \
                   (means[:, 0, :].unsqueeze(1).repeat(
-                      1, self.pred_len + self.seq_len, 1))
+                      1, self.pred_len + self.seq_len, 1))   #shape [batch_size,seq_len+pred_len,enc_in]
         return dec_out
 
     def imputation(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask):
