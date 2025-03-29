@@ -2,10 +2,10 @@ export CUDA_VISIBLE_DEVICES=0
 
 model_name=TimesNet
 
-python -u run.py \
+python -u /content/drive/MyDrive/timesnet_learning/run.py \
   --task_name long_term_forecast \
   --is_training 1 \
-  --root_path ./dataset/ \
+  --root_path /content/drive/MyDrive/timesnet_learning/dataset/ \
   --data_path btc.csv \
   --model_id 'btc_target_close_nontimef_withscale' \
   --model $model_name \
@@ -25,7 +25,7 @@ python -u run.py \
   --dec_in 16 \
   --c_out 1 \
   --des 'Exp' \
-  --d_model 16 \
+  --d_model 8 \
   --d_ff 8 \
   --top_k 4 \
   --itr 1
