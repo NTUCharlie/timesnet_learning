@@ -31,4 +31,5 @@ python -u run.py \
   --num_kernels 6 \
   --itr 1 \
   --learning_rate 0.001 \
-  --lradj constant
+  --lradj constant \
+  --train_epochs 100
