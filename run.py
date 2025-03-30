@@ -3,6 +3,7 @@ import os
 import torch
 import torch.backends
 from exp.exp_long_term_forecasting import Exp_Long_Term_Forecast
+from exp.exp_long_term_forecasting_no_revin import Exp_Long_Term_Forecast_NoRevin
 from exp.exp_imputation import Exp_Imputation
 from exp.exp_short_term_forecasting import Exp_Short_Term_Forecast
 from exp.exp_anomaly_detection import Exp_Anomaly_Detection
@@ -162,6 +163,9 @@ if __name__ == '__main__':
 
     if args.task_name == 'long_term_forecast':
         Exp = Exp_Long_Term_Forecast
+    elif args.task_name == 'long_term_forecast_no_revin':
+        print('Using Long Term Forecasting without Revin')
+        Exp = Exp_Long_Term_Forecast_NoRevin
     elif args.task_name == 'short_term_forecast':
         Exp = Exp_Short_Term_Forecast
     elif args.task_name == 'imputation':

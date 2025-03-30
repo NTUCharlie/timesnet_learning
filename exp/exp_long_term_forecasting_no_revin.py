@@ -15,9 +15,9 @@ from utils.augmentation import run_augmentation, run_augmentation_single
 warnings.filterwarnings('ignore')
 
 
-class Exp_Long_Term_Forecast(Exp_Basic):
+class Exp_Long_Term_Forecast_NoRevin(Exp_Basic):
     def __init__(self, args):
-        super(Exp_Long_Term_Forecast, self).__init__(args)
+        super(Exp_Long_Term_Forecast_NoRevin, self).__init__(args)
 
     def _build_model(self):
         model = self.model_dict[self.args.model].Model(self.args).float()
@@ -41,6 +41,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
     def vali(self, vali_data, vali_loader, criterion):
         total_loss = []
+        corr = []
         self.model.eval()
         with torch.no_grad():
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
@@ -66,11 +67,19 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 pred = outputs.detach().cpu()
                 true = batch_y.detach().cpu()               
                 loss = criterion(pred, true)
-
+                
                 total_loss.append(loss)
+                
+                # calculate correlation beween pred and true
+                pred_np = pred.numpy()[:,-1,0].reshape(-1)
+                true_np = true.numpy()[:,-1,0].reshape(-1)  
+                correlation = np.corrcoef(pred_np, true_np)[0, 1]
+                corr.append(correlation)
+
         total_loss = np.average(total_loss)
+        final_corr = np.average(corr)
         self.model.train()
-        return total_loss
+        return total_loss, final_corr
 
     def train(self, setting):
         train_data, train_loader = self._get_data(flag='train')
@@ -96,7 +105,6 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             iter_count = 0
             train_loss = []
             train_corr = []
-
             self.model.train()
             epoch_time = time.time()
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
@@ -129,15 +137,15 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
                     loss = criterion(outputs, batch_y)
                     train_loss.append(loss.item())
-
+                    
                     #calculate correlation beween pred and true
                     pred_np = outputs.detach().cpu().numpy()[:,-1,0].reshape(-1)    
                     true_np = batch_y.detach().cpu().numpy()[:,-1,0].reshape(-1)
                     correlation = np.corrcoef(pred_np, true_np)[0, 1]
                     train_corr.append(correlation)
-                    
+
                 if (i + 1) % 10 == 0:
-                    print("\titers: {0}, epoch: {1} | loss: {2:.7f} | corr: {3}".format(i + 1, epoch + 1, loss.item(), correlation))
+                    print("\titers: {0}, epoch: {1} | loss: {2:.7f}, | corr:{3}".format(i + 1, epoch + 1, loss.item(), correlation))
                     speed = (time.time() - time_now) / iter_count
                     left_time = speed * ((self.args.train_epochs - epoch) * train_steps - i)
                     print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
@@ -154,11 +162,14 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
-            vali_loss = self.vali(vali_data, vali_loader, criterion)
-            test_loss = self.vali(test_data, test_loader, criterion)
+            train_corr = np.average(train_corr)
+            vali_loss, vali_corr = self.vali(vali_data, vali_loader, criterion)
+            test_loss, test_corr = self.vali(test_data, test_loader, criterion)
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss, test_loss))
+            print("Epoch: {0}, Steps: {1} | Train corr: {2:.7f} Vali corr: {3:.7f} Test corr: {4:.7f}".format(
+                epoch + 1, train_steps, train_corr, vali_corr, test_corr))
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
