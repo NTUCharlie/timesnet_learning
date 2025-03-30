@@ -11,6 +11,7 @@ import warnings
 import numpy as np
 from utils.dtw_metric import dtw, accelerated_dtw
 from utils.augmentation import run_augmentation, run_augmentation_single
+import csv
 
 warnings.filterwarnings('ignore')
 
@@ -101,6 +102,17 @@ class Exp_Long_Term_Forecast_NoRevin(Exp_Basic):
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
+        # Create a CSV file to save losses
+        csv_file = os.path.join(path, 'losses_and_correlations.csv')
+        file_exists = os.path.isfile(csv_file)  # Check if the file already exists
+
+        with open(csv_file, mode='a' if file_exists else 'w', newline='') as file:
+            if not file_exists:
+                writer = csv.writer(file)
+                writer.writerow(['Epoch', 'Train Loss', 'Validation Loss', 'Test Loss', 'Train Corr', 'Validation Corr', 'Test Corr'])
+            else:
+                pass
+            
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []
@@ -176,6 +188,11 @@ class Exp_Long_Term_Forecast_NoRevin(Exp_Basic):
                 break
 
             adjust_learning_rate(model_optim, epoch + 1, self.args)
+            
+            with open(csv_file, mode='a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([epoch + 1, train_loss, vali_loss, test_loss, train_corr, vali_corr, test_corr])
+        
 
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
