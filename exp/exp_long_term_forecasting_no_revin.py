@@ -72,8 +72,8 @@ class Exp_Long_Term_Forecast_NoRevin(Exp_Basic):
                 total_loss.append(loss)
                 
                 # calculate correlation beween pred and true
-                pred_np = pred.numpy()[:,-1,0].reshape(-1)
-                true_np = true.numpy()[:,-1,0].reshape(-1)  
+                pred_np = pred.numpy()[:,-self.args.pred_len:,0].sum(axis=1).reshape(-1)
+                true_np = true.numpy()[:,-self.args.pred_len:,0].sum(axis=1).reshape(-1)  
                 correlation = np.corrcoef(pred_np, true_np)[0, 1]
                 corr.append(correlation)
 
@@ -151,8 +151,8 @@ class Exp_Long_Term_Forecast_NoRevin(Exp_Basic):
                     train_loss.append(loss.item())
                     
                     #calculate correlation beween pred and true
-                    pred_np = outputs.detach().cpu().numpy()[:,-1,0].reshape(-1)    
-                    true_np = batch_y.detach().cpu().numpy()[:,-1,0].reshape(-1)
+                    pred_np = outputs.detach().cpu().numpy()[:,-self.args.pred_len:,0].sum(axis=1).reshape(-1)    
+                    true_np = batch_y.detach().cpu().numpy()[:,-self.args.pred_len:,0].sum(axis=1).reshape(-1)
                     correlation = np.corrcoef(pred_np, true_np)[0, 1]
                     train_corr.append(correlation)
 
