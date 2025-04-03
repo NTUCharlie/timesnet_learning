@@ -5,6 +5,7 @@ import torch
 import matplotlib.pyplot as plt
 import pandas as pd
 import math
+import time
 
 plt.switch_backend('agg')
 
@@ -42,6 +43,8 @@ class EarlyStopping:
         self.delta = delta
 
     def __call__(self, val_loss, model, path):
+        timestamp = time.strftime("%Y%m%d%H%M%S")
+        torch.save(model.state_dict(), path + '/' + f'checkpoint_{timestamp}.pth')
         score = -val_loss
         if self.best_score is None:
             self.best_score = score
