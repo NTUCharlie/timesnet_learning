@@ -337,6 +337,8 @@ class Dataset_Custom_target(Dataset):
 
         self.root_path = root_path
         self.data_path = data_path
+        self.train_data_mean = None
+        self.train_data_std = None
         self.__read_data__()
 
     def __read_data__(self):
@@ -369,6 +371,8 @@ class Dataset_Custom_target(Dataset):
             train_data = df_data[border1s[0]:border2s[0]]
             self.scaler.fit(train_data.values)
             data = self.scaler.transform(df_data.values)
+            self.train_data_mean = self.scaler.mean_
+            self.train_data_std = self.scaler.scale_
         else:
             data = df_data.values
 
